@@ -15,16 +15,6 @@ public protocol SerializableObject {
     func getKeyValuePairs() -> [String: SupportedValue]
 }
 
-public protocol IdentifierType : Hashable, Equatable { }
-
-public protocol DatabaseEntity: SerializableObject {
-    associatedtype Identifier: IdentifierType
-    
-    static var defaultIdentifierField: String { get }
-    
-    func getIdentifier() -> Identifier?
-}
-
 extension SerializableObject {
     public func convert<S: SerializableObject>(to type: S.Type) -> (converted: S, remainder: Self) {
         var s = S(dictionary: [:])
