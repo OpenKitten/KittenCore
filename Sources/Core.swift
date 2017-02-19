@@ -115,7 +115,39 @@ public protocol ConcreteSerializable {
     static func findOne(byId identifier: T.Entity.Identifier) throws -> Self?
 }
 
-extension ConcreteSerializable {
+extension ConcreteModel {
+    public static func find(matching query: T.Query?, sorted by: Sort?) throws -> AnyIterator<Self> {
+        let results = try table.find(matching: query, sorted: by)
+        
+        return AnyIterator {
+            while true {
+                guard let next = results.next() else {
+                    return nil
+                }
+                
+                if let entity = try? Self(from: next) {
+                    return entity
+                }
+            }
+        }
+    }
+    
+    public static func findOne(matching query: T.Query?) throws -> Self? {
+        guard let result = try table.findOne(matching: query) else {
+            return nil
+        }
+        
+        return try Self(from: result)
+    }
+    
+    public static func findOne(byId identifier: T.Entity.Identifier) throws -> Self? {
+        guard let result = try table.findOne(byId: identifier) else {
+            return nil
+        }
+        
+        return try Self(from: result)
+    }
+    
     public func convert<S: SerializableObject>(to type: S.Type) -> (converted: S, remainder: Self.T.Entity) {
         var s = S(dictionary: [:])
         
@@ -124,8 +156,8 @@ extension ConcreteSerializable {
         for (key, value) in self.serialize().getKeyValuePairs() {
             if let value = value as? S.SupportedValue {
                 s.setValue(to: value, forKey: key)
-//            } else if let value = T.Entity.self.convert(value, to: S.self) {
-//                s.setValue(to: value, forKey: key)
+                //            } else if let value = T.Entity.self.convert(value, to: S.self) {
+                //                s.setValue(to: value, forKey: key)
             } else {
                 remainder.setValue(to: value, forKey: key)
             }
