@@ -36,7 +36,7 @@ public protocol SerializableObject : Convertible {
 }
 
 extension SerializableObject {
-    public func convert<S>(to type: S.Type) -> (converted: S, remainder: Self) where S : SerializableObject {
+    public func convert<S>(toObject type: S.Type) -> (converted: S, remainder: Self) where S : SerializableObject {
         var s = S(dictionary: [:])
         
         var remainder = Self(dictionary: [:])
@@ -64,7 +64,7 @@ extension SerializableObject {
         return (s, remainder)
     }
     
-    public func convert<S>(to type: S.Type) -> S where S : InitializableSequence {
+    public func convert<S>(toSequence type: S.Type) -> S where S : InitializableSequence {
         return S(sequence: self.getValues().flatMap { value in
             if let value = value as? S.SupportedValue {
                 return value
@@ -79,11 +79,11 @@ extension SerializableObject {
     }
     
     public func convert<S>(toType type: S.Type) -> S.SequenceType.SupportedValue? where S : SerializableObject {
-        return convert(to: type).converted as? S.SequenceType.SupportedValue
+        return convert(toObject: type).converted as? S.SequenceType.SupportedValue
     }
     
     public func convert<S>(toType type: S.Type) -> S.SupportedValue? where S : InitializableSequence {
-        return convert(to: type) as? S.SupportedValue
+        return convert(toSequence: type) as? S.SupportedValue
     }
 }
 
