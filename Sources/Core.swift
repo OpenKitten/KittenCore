@@ -113,6 +113,26 @@ extension SerializableSequence {
             return nil
         })
     }
+    
+    public func convert<S>(toType type: S.Type) -> S.SupportedValue? where S : InitializableSequence {
+        let sequence: [S.SupportedValue] = self.flatMap { element in
+            if let element = element as? Convertible {
+                return element.convert(toType: type)
+            }
+            
+            return element as? S.SupportedValue
+        }
+        
+        return S(sequence: sequence) as? S.SupportedValue
+    }
+    
+    public func convert<S>(toType type: S.Type) -> S.SequenceType.SupportedValue? where S : SerializableObject {
+        if self is S.SequenceType.SupportedValue {
+            return self as? S.SequenceType.SupportedValue
+        }
+        
+        return self.convert(toType: S.SequenceType.self)
+    }
 }
 
 extension Dictionary : SerializableObject {
@@ -149,26 +169,6 @@ extension Dictionary : SerializableObject {
 
 extension Array : InitializableSequence {
     public typealias SupportedValue = Element
-    
-    public func convert<S>(toType type: S.Type) -> S.SupportedValue? where S : InitializableSequence {
-        let sequence: [S.SupportedValue] = self.flatMap { element in
-            if let element = element as? Convertible {
-                return element.convert(toType: type)
-            }
-            
-            return element as? S.SupportedValue
-        }
-        
-        return S(sequence: sequence) as? S.SupportedValue
-    }
-    
-    public func convert<S>(toType type: S.Type) -> S.SequenceType.SupportedValue? where S : SerializableObject {
-        if self is S.SequenceType.SupportedValue {
-            return self as? S.SequenceType.SupportedValue
-        }
-        
-        return self.convert(toType: S.SequenceType.self)
-    }
     
     public init<S>(sequence: S) where S : Sequence, S.Iterator.Element == Element {
         self = Array(sequence)
