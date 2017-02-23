@@ -269,7 +269,7 @@ extension NSRegularExpression : SimpleConvertible {
     }
 }
 
-public struct Null : SimpleConvertible {
+extension NSNull : SimpleConvertible {
     public func convert<S>() -> S? {
         if self is S {
             return self as? S
@@ -277,6 +277,6 @@ public struct Null : SimpleConvertible {
         
         return nil
     }
-    
-    public init() {}
 }
+
+public typealias Null = NSNull
