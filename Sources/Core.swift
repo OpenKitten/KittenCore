@@ -1,76 +1,49 @@
 import Foundation
 
 public protocol Convertible {
-    func convert<S : SerializableObject>(toType type: S.Type) -> S.SequenceType.SupportedValue?
-    func convert<S : InitializableSequence>(toType type: S.Type) -> S.SupportedValue?
+    func convert<DT : DataType>(to type: DT.Type) -> DT.SupportedValue?
+}
+
+public protocol DataType {
+    associatedtype Object: InitializableObject
+    associatedtype Sequence: InitializableSequence
+    associatedtype SupportedValue
 }
 
 public protocol SimpleConvertible : Convertible {
-    func convert<S: Any>() -> S?
+    func convert<S: Any>(_ type: S.Type) -> S?
 }
 
 extension SimpleConvertible {
-    public func convert<S>(toType type: S.Type) -> S.SequenceType.SupportedValue? where S : SerializableObject {
-        return self.convert()
-    }
-    
-    public func convert<S>(toType type: S.Type) -> S.SupportedValue? where S : InitializableSequence {
-        return self.convert()
+    public func convert<DT>(to type: DT.Type) -> DT.SupportedValue? where DT : DataType {
+        return self.convert(DT.SupportedValue.self)
     }
 }
 
-public protocol SerializableObject : Convertible {
-    associatedtype SequenceType : InitializableSequence
-    associatedtype HashableKey : Hashable
+public protocol InitializableObject : InitializableSequence {
+    associatedtype ObjectKey: Hashable
+    associatedtype ObjectValue
+    associatedtype SupportedValue = (ObjectKey, ObjectValue)
     
-    init(dictionary: [HashableKey: SequenceType.SupportedValue])
-    
-    func getValue(forKey key: HashableKey) -> SequenceType.SupportedValue?
-    mutating func setValue(to newValue: SequenceType.SupportedValue?, forKey key: HashableKey)
-    
-    func getKeys() -> [HashableKey]
-    func getValues() -> [SequenceType.SupportedValue]
-    func getKeyValuePairs() -> [HashableKey: SequenceType.SupportedValue]
-    
-    static func convert(_ value: Any) -> SequenceType.SupportedValue?
+    var dictionaryRepresentation: [ObjectKey: ObjectValue] { get }
 }
 
-extension SerializableObject {
-    public func convert<S>(toObject type: S.Type) -> (converted: S, remainder: Self) where S : SerializableObject {
-        var s = S(dictionary: [:])
-        
-        var remainder = Self(dictionary: [:])
-        
-        loop: for (key, value) in self.getKeyValuePairs() {
-            if let key = key as? S.HashableKey {
-                if let value = value as? S.SequenceType.SupportedValue {
-                    s.setValue(to: value, forKey: key)
-                    continue loop
-                } else if let value = value as? Convertible {
-                    if let value: S.SequenceType.SupportedValue = value.convert(toType: type) {
-                        s.setValue(to: value, forKey: key)
-                        continue loop
-                    }
-                }
-                
-                if let newValue = S.convert(value) {
-                    s.setValue(to: newValue, forKey: key)
-                }
+extension InitializableObject {
+    public func convert<DT : DataType>(to type: DT.Type) -> DT.SupportedValue? {
+        return self.convert(toObject: type) as? DT.SupportedValue
+    }
+    
+    public func convert<DT>(toObject type: DT.Type) -> DT.Object where DT : DataType {
+        return DT.Object(sequence: self.dictionaryRepresentation.flatMap { key, value in
+            guard let key = key as? DT.Object.ObjectKey else {
+                return nil
             }
             
-            remainder.setValue(to: value, forKey: key)
-        }
-        
-        return (s, remainder)
-    }
-    
-    public func convert<S>(toSequence type: S.Type) -> S where S : InitializableSequence {
-        return S(sequence: self.getValues().flatMap { value in
-            if let value = value as? S.SupportedValue {
-                return value
+            if let value = value as? DT.Object.ObjectValue {
+                return (key, value) as? DT.Object.SupportedValue
             } else if let value = value as? Convertible {
-                if let value: S.SupportedValue = value.convert(toType: type) {
-                    return value
+                if let value: DT.SupportedValue = value.convert(to: type) {
+                    return (key, value) as? DT.Object.SupportedValue
                 }
             }
             
@@ -78,12 +51,18 @@ extension SerializableObject {
         })
     }
     
-    public func convert<S>(toType type: S.Type) -> S.SequenceType.SupportedValue? where S : SerializableObject {
-        return convert(toObject: type).converted as? S.SequenceType.SupportedValue
-    }
-    
-    public func convert<S>(toType type: S.Type) -> S.SupportedValue? where S : InitializableSequence {
-        return convert(toSequence: type) as? S.SupportedValue
+    public func convert<DT>(toSequence type: DT.Type) -> DT.Sequence where DT : DataType {
+        return DT.Sequence(sequence: self.dictionaryRepresentation.flatMap { _, value in
+            if let value = value as? DT.Sequence.SupportedValue {
+                return value
+            } else if let value = value as? Convertible {
+                if let value: DT.SupportedValue = value.convert(to: type) {
+                    return value as? DT.Sequence.SupportedValue
+                }
+            }
+            
+            return nil
+        })
     }
 }
 
@@ -96,74 +75,44 @@ public protocol InitializableSequence : SerializableSequence {
 }
 
 extension SerializableSequence {
-    mutating func convert<IS: InitializableSequence>(to type: IS.Type) -> IS {
+    public func convert<DT>(to type: DT.Type) -> DT.SupportedValue? where DT : DataType {
         var iterator = self.makeIterator()
         
-        return IS(sequence: self.flatMap { value in
+        return DT.Sequence(sequence: self.flatMap { value in
             if let value = iterator.next() {
-                if let value = value as? IS.SupportedValue {
+                if let value = value as? DT.Sequence.SupportedValue {
                     return value
                 } else if let value = value as? Convertible {
-                    if let value: IS.SupportedValue = value.convert(toType: type) {
-                        return value
+                    if let value: DT.SupportedValue = value.convert(to: type) {
+                        return value as? DT.Sequence.SupportedValue
                     }
                 }
             }
             
             return nil
-        })
-    }
-    
-    public func convert<S>(toType type: S.Type) -> S.SupportedValue? where S : InitializableSequence {
-        let sequence: [S.SupportedValue] = self.flatMap { element in
-            if let element = element as? Convertible {
-                return element.convert(toType: type)
-            }
-            
-            return element as? S.SupportedValue
-        }
-        
-        return S(sequence: sequence) as? S.SupportedValue
-    }
-    
-    public func convert<S>(toType type: S.Type) -> S.SequenceType.SupportedValue? where S : SerializableObject {
-        if self is S.SequenceType.SupportedValue {
-            return self as? S.SequenceType.SupportedValue
-        }
-        
-        return self.convert(toType: S.SequenceType.self)
+        }) as? DT.SupportedValue
     }
 }
 
-extension Dictionary : SerializableObject {
+extension AnyIterator : SerializableSequence {
+    public typealias SupportedValue = Any
+}
+
+extension Dictionary : InitializableObject {
+    public init<S>(sequence: S) where S : Sequence, S.Iterator.Element == (Key, Value) {
+        var dict = [Key: Value]()
+        
+        for (key, value) in sequence {
+            dict[key] = value
+        }
+        
+        self = dict
+    }
+    
     public typealias SequenceType = Array<Value>
     
-    public mutating func setValue(to newValue: Value?, forKey key: Key) {
-        self[key] = newValue
-    }
-    
-    public func getKeys() -> [Key] {
-        return Array(self.keys)
-    }
-    
-    public func getValues() -> [Value] {
-        return Array(self.values)
-    }
-    
-    public init(dictionary: [Key : Value]) {
-        self = dictionary
-    }
-    
-    public func getKeyValuePairs() -> [Key : Value] {
+    public var dictionaryRepresentation: [Key : Value] {
         return self
-    }
-    
-    public func getValue(forKey key: Key) -> Value? {
-        return self[key]
-    }
-    
-    public static func convert(_ value: Any) -> Value? {
-        return value as? Value
     }
 }
 
@@ -176,7 +125,7 @@ extension Array : InitializableSequence {
 }
 
 extension String : SimpleConvertible {
-    public func convert<S>() -> S? {
+    public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
         }
@@ -230,7 +179,7 @@ extension String : SimpleConvertible {
 }
 
 extension StaticString : SimpleConvertible {
-    public func convert<S>() -> S? {
+    public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
         }
@@ -240,7 +189,7 @@ extension StaticString : SimpleConvertible {
 }
 
 extension Bool : SimpleConvertible {
-    public func convert<S>() -> S? {
+    public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
         }
@@ -250,7 +199,7 @@ extension Bool : SimpleConvertible {
 }
 
 extension Data : SimpleConvertible {
-    public func convert<S>() -> S? {
+    public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
         }
@@ -260,7 +209,7 @@ extension Data : SimpleConvertible {
 }
 
 extension NSRegularExpression : SimpleConvertible {
-    public func convert<S>() -> S? {
+    public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
         }
@@ -270,7 +219,7 @@ extension NSRegularExpression : SimpleConvertible {
 }
 
 extension NSNull : SimpleConvertible {
-    public func convert<S>() -> S? {
+    public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
         }
