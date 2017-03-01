@@ -35,9 +35,27 @@ extension InitializableObject {
     
     public func convert<DT>(toObject type: DT.Type) -> DT.Object where DT : DataType {
         return DT.Object(sequence: self.dictionaryRepresentation.flatMap { key, value in
-            guard let key = key as? DT.Object.ObjectKey else {
+            let newKey: DT.Object.ObjectKey
+            
+            if let key = key as? DT.Object.ObjectKey {
+                newKey = key
+            } else if let key = key as? SimpleConvertible {
+                if let key = key.convert(DT.Object.ObjectKey.self) {
+                    newKey = key
+                } else {
+                    return nil
+                }
+            } else if let key = key as? Convertible {
+                if let key = key.convert(to: type) as? DT.Object.ObjectKey {
+                    newKey = key
+                } else {
+                    return nil
+                }
+            } else {
                 return nil
             }
+            
+            let key = newKey
             
             if let value = value as? DT.Object.ObjectValue {
                 return (key, value) as? DT.Object.SupportedValue
@@ -130,6 +148,10 @@ extension String : SimpleConvertible {
             return self as? S
         }
         
+        if let kittenBytes = self.kittenBytes as? S {
+            return kittenBytes
+        }
+        
         if Double.self is S, let number = Double(self) as? S {
             return number
         }
@@ -182,6 +204,14 @@ extension StaticString : SimpleConvertible {
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
+        }
+        
+        if let kittenBytes = self.kittenBytes as? S {
+            return kittenBytes
+        }
+        
+        if let string = String(self.unicodeScalar) as? S {
+            return string
         }
         
         return nil
