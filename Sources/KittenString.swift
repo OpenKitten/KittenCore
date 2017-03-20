@@ -81,7 +81,17 @@ public struct KittenBytes : Hashable, KittenString, SimpleConvertible, Expressib
     }
     
     public var hashValue: Int {
-        return String(bytes: bytes, encoding: .utf8)!.hashValue
+        guard bytes.count > 0 else {
+            return 0
+        }
+        
+        var h = 0
+        
+        for i in 0..<bytes.count {
+            h = 31 &* h &+ numericCast(bytes[i])
+        }
+        
+        return h
     }
     
     public func convert<S>(_ type: S.Type) -> S? {
