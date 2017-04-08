@@ -1,5 +1,6 @@
 import Foundation
 
+/// Converts a signed integer to another (supported) signed integer type
 func representSigned<I : SignedInteger, S>(_ i: I) -> S? {
     let largeInt = numericCast(i) as Int64
     
@@ -26,6 +27,7 @@ func representSigned<I : SignedInteger, S>(_ i: I) -> S? {
     return nil
 }
 
+/// Converts a unsigned integer to another (supported) unsigned integer type
 func representUnsigned<I : UnsignedInteger, S>(_ i: I) -> S? {
     let largeInt = numericCast(i) as UInt64
     
@@ -52,7 +54,9 @@ func representUnsigned<I : UnsignedInteger, S>(_ i: I) -> S? {
     return nil
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension Int : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -73,7 +77,9 @@ extension Int : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension Int8 : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -95,7 +101,9 @@ extension Int8 : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension Int16 : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -117,7 +125,9 @@ extension Int16 : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension Int32 : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -139,7 +149,9 @@ extension Int32 : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension Int64 : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -161,7 +173,9 @@ extension Int64 : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension UInt : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -183,7 +197,9 @@ extension UInt : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension UInt8 : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -205,7 +221,9 @@ extension UInt8 : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension UInt16 : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -227,28 +245,9 @@ extension UInt16 : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension UInt32 : SimpleConvertible {
-    public func convert<S>(_ type: S.Type) -> S? {
-        if self is S {
-            return self as? S
-        }
-        
-        if let new = representUnsigned(self) as S? {
-            return new
-        }
-        
-        if let value = Double(self) as? S {
-            return value
-        }
-        
-        if let value = self.description as? S {
-            return value
-        }
-        
-        return nil
-    }}
-
-extension UInt64 : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -270,7 +269,33 @@ extension UInt64 : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
+extension UInt64 : SimpleConvertible {
+    /// Converts to another type
+    public func convert<S>(_ type: S.Type) -> S? {
+        if self is S {
+            return self as? S
+        }
+        
+        if let new = representUnsigned(self) as S? {
+            return new
+        }
+        
+        if let value = Double(self) as? S {
+            return value
+        }
+        
+        if let value = self.description as? S {
+            return value
+        }
+        
+        return nil
+    }
+}
+
+/// Conforms as a convertible to avoid multiple conformances
 extension Date : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
@@ -292,7 +317,9 @@ extension Date : SimpleConvertible {
     }
 }
 
+/// Conforms as a convertible to avoid multiple conformances
 extension Double : SimpleConvertible {
+    /// Converts to another type
     public func convert<S>(_ type: S.Type) -> S? {
         if self is S {
             return self as? S
