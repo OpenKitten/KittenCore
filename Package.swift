@@ -1,8 +1,12 @@
+// swift-tools-version:4.0
 import PackageDescription
 
-let package = Package(
+var package = Package(
     name: "KittenCore",
+    products: [
+        .library(name: "KittenCore", targets: ["KittenCore"])
+    ],
     targets: [
-        Target(name: "KittenCore"),
+        .target(name: "KittenCore")
     ]
 )
